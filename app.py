@@ -19,6 +19,7 @@ import streamlit as st
 
 # Local modules
 from services.vision_service import AzureVisionService
+from services.local_ocr_service import LocalOCRError, LocalOCRService
 from utils.image_utils import (
     validate_image_file,
     annotate_objects_on_image,
@@ -61,6 +62,8 @@ if "uploaded_metadata" not in st.session_state:
     st.session_state.uploaded_metadata = None
 if "analysis_results" not in st.session_state:
     st.session_state.analysis_results = None
+if "local_ocr_results" not in st.session_state:
+    st.session_state.local_ocr_results = None
 if "active_preset" not in st.session_state:
     st.session_state.active_preset = None
 
@@ -99,49 +102,6 @@ with st.sidebar:
         index=0 if is_azure_configured else 1,
         label_visibility="collapsed"
     )
-
-    st.markdown("---")
-
-    # Cloud Connection Status Card
-    st.markdown("### ☁️ Cloud Service Status")
-    if is_azure_configured:
-        st.markdown(
-            f"""
-            <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 8px; padding: 0.8rem; margin-bottom: 0.8rem;">
-                <div style="color: #34d399; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem;">
-                    <span>●</span> Azure Vision Configured
-                </div>
-                <div style="color: #94a3b8; font-size: 0.75rem; margin-top: 0.3rem;">
-                    Endpoint: <code style="color: #e2e8f0;">{vision_service.endpoint[:28]}...</code><br>
-                    Key: <code style="color: #e2e8f0;">{vision_service.get_masked_key()}</code>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown(
-            """
-            <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 0.8rem; margin-bottom: 0.8rem;">
-                <div style="color: #fbbf24; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem;">
-                    <span>●</span> Credentials Missing
-                </div>
-                <div style="color: #94a3b8; font-size: 0.75rem; margin-top: 0.3rem;">
-                    Azure credentials are not set in <code>.env</code>. You can test live images once configured or use the <strong>Demo Showcase</strong>.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    # Quick Connectivity Diagnostic Trigger
-    if st.button("🔍 Test Azure Connectivity", use_container_width=True):
-        with st.spinner("Testing Azure Vision API connection..."):
-            diag = vision_service.test_connectivity()
-            if diag["status"] == "success":
-                st.success(f"Connected! {diag['message']}")
-            else:
-                st.error(f"Connection Failed: {diag['message']}")
 
     st.markdown("---")
 
@@ -224,7 +184,11 @@ if app_mode == "🚀 Live Image Analyzer":
             is_valid, err_msg, meta = validate_image_file(uploaded_file, uploaded_file.name)
 
             if is_valid:
-                st.session_state.uploaded_image_bytes = bytes(uploaded_file.getbuffer())
+                uploaded_bytes = bytes(uploaded_file.getbuffer())
+                if st.session_state.uploaded_image_bytes != uploaded_bytes:
+                    st.session_state.analysis_results = None
+                    st.session_state.local_ocr_results = None
+                st.session_state.uploaded_image_bytes = uploaded_bytes
                 st.session_state.uploaded_metadata = meta
 
                 # Display file metadata
@@ -252,11 +216,13 @@ if app_mode == "🚀 Live Image Analyzer":
                     st.session_state.uploaded_image_bytes = None
                     st.session_state.uploaded_metadata = None
                     st.session_state.analysis_results = None
+                    st.session_state.local_ocr_results = None
                     st.rerun()
 
             else:
                 st.error(f"Validation Error: {err_msg}")
                 st.session_state.uploaded_image_bytes = None
+                st.session_state.local_ocr_results = None
 
     with col_preview:
         st.markdown("### 🖼️ Image Preview")
@@ -277,36 +243,28 @@ if app_mode == "🚀 Live Image Analyzer":
 
     st.markdown("---")
 
-    # Execution Action Bar
-    exec_col1, exec_col2 = st.columns([2, 1])
-    with exec_col1:
-        analyze_btn = st.button("⚡ Run Azure AI Vision Analysis", type="primary", use_container_width=True)
+    st.caption(
+        "Local OCR runs on this computer with EasyOCR. The first run may download "
+        "English model files; uploaded images are not sent to Azure by this option."
+    )
+    local_ocr_btn = st.button(
+        "📝 Run Local OCR (EasyOCR)",
+        use_container_width=True,
+        key="run_local_ocr"
+    )
 
-    with exec_col2:
-        if not is_azure_configured:
-            st.warning("⚠️ Azure not configured. Set credentials in .env or try Offline Demo.")
-
-    # Execute Analysis
-    if analyze_btn:
+    if local_ocr_btn:
         if not st.session_state.uploaded_image_bytes:
-            st.warning("Please upload an image first before requesting analysis.")
-        elif not is_azure_configured:
-            st.error(
-                "Cannot perform live analysis: Azure Vision credentials are not configured.\n\n"
-                "To run live cloud analysis, configure AZURE_VISION_ENDPOINT and AZURE_VISION_KEY in `.env` "
-                "(or in the Azure Configuration tab).\n\n"
-                "Alternatively, switch to **'🏛️ Offline Demo Showcase'** in the sidebar to review the full interface with sample data."
-            )
+            st.warning("Upload an image before running local OCR.")
         else:
-            with st.spinner("Communicating with Azure AI Vision 4.0 API (Captions, Objects, Tags, OCR)..."):
-                result = vision_service.analyze_image(st.session_state.uploaded_image_bytes)
-
-                if result.get("success"):
-                    st.session_state.analysis_results = result
-                    st.success("Azure AI Vision analysis completed successfully!")
-                else:
-                    st.error(f"Analysis Failed ({result.get('error_type')}): {result.get('message')}")
-                    st.session_state.analysis_results = None
+            with st.spinner("Loading EasyOCR and recognizing text locally..."):
+                try:
+                    st.session_state.local_ocr_results = LocalOCRService.recognize_image(
+                        st.session_state.uploaded_image_bytes
+                    )
+                except LocalOCRError as exc:
+                    st.session_state.local_ocr_results = None
+                    st.error(str(exc))
 
     # --------------------------------------------------------------------------
     # Render Analysis Results (if available)
@@ -558,6 +516,67 @@ if app_mode == "🚀 Live Image Analyzer":
                     )
 
             st.json(res["raw_json"])
+
+    if st.session_state.local_ocr_results:
+        local_ocr = st.session_state.local_ocr_results
+        st.markdown("---")
+        st.markdown("### 📝 Local OCR Results (EasyOCR)")
+        st.caption(
+            "Recognized locally with EasyOCR on CPU. These results are independent "
+            "of Azure and apply only to the uploaded image."
+        )
+        if local_ocr["detected"]:
+            local_col1, local_col2 = st.columns([1, 1], gap="large")
+            with local_col1:
+                st.markdown(
+                    f"**Extracted Text ({local_ocr['total_lines']} lines · "
+                    f"{local_ocr['total_words']} words)**"
+                )
+                st.text_area(
+                    "Copyable local OCR text",
+                    value=local_ocr["full_text"],
+                    height=240,
+                    key="local_ocr_text"
+                )
+                st.download_button(
+                    "📥 Download Local OCR Text (.txt)",
+                    data=local_ocr["full_text"],
+                    file_name="easyocr_extracted_text.txt",
+                    mime="text/plain",
+                    use_container_width=True
+                )
+
+            with local_col2:
+                original_image = Image.open(
+                    io.BytesIO(st.session_state.uploaded_image_bytes)
+                )
+                highlighted_image = annotate_ocr_lines_on_image(
+                    original_image,
+                    local_ocr["lines"]
+                )
+                st.image(
+                    highlighted_image,
+                    caption="Detected text regions highlighted locally",
+                    use_container_width=True
+                )
+
+            st.markdown("#### Line Details")
+            local_line_rows = [
+                {
+                    "Line": index + 1,
+                    "Text": line["text"],
+                    "Words": line["words_count"],
+                    "OCR Confidence": f"{line['confidence_pct']:.1f}%"
+                }
+                for index, line in enumerate(local_ocr["lines"])
+            ]
+            st.dataframe(
+                pd.DataFrame(local_line_rows),
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.info("EasyOCR ran locally but did not detect readable text in this image.")
 
 
 # ------------------------------------------------------------------------------

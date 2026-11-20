@@ -18,7 +18,7 @@ Designed as a college-level academic project aligned with **Microsoft Azure AI F
 - **Dense Sub-Region Captioning:** Discovers and describes multiple distinct regions within a single image.
 - **Multi-Class Object Detection:** Identifies entities, outputs spatial coordinates $(X, Y, W, H)$, and draws high-contrast bounding boxes with confidence labels using **Pillow**.
 - **Semantic Concept Tagging:** Classifies images across thousands of visual categories with statistical confidence progress bars.
-- **Optical Character Recognition (OCR):** High-precision text extraction for both printed and handwritten text via the Azure Read API, complete with line counts, word counts, and a copyable text area.
+- **Optical Character Recognition (OCR):** Azure Read API for live Azure analysis, plus optional local English OCR for uploaded images via EasyOCR (CPU; no Azure key required). Local results include recognized lines, confidence scores, highlighted text regions, and a downloadable text file.
 
 ### 2. Modern Dark-Themed UI/UX
 - Near-black canvas (`#0A0E17`) with charcoal cards (`#141B2D`) and Azure blue (`#0078D4` / `#38BDF8`) accents.
@@ -34,6 +34,7 @@ Designed as a college-level academic project aligned with **Microsoft Azure AI F
 ### 4. Academic Resilience (Offline Demo Mode)
 - **Zero-Cloud-Cost Demonstration:** Includes a dedicated offline showcase featuring pre-packaged academic scenarios (Traffic Scene, Conference Presentation, Business Invoice).
 - Displays transparent academic demo banners—never pretends an analysis was called on Azure when running offline.
+- The Live Image Analyzer also offers **Run Local OCR (EasyOCR)** for actual text recognition on uploaded images without Azure credentials. First use downloads EasyOCR's English model files; this requires an internet connection.
 
 ### 5. Multi-Format Data Export
 - Download full analysis results matching official Azure Vision 4.0 schema as a **JSON** file.

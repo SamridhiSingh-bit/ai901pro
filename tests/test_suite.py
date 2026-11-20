@@ -21,6 +21,7 @@ if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 
 from services.vision_service import AzureVisionService
+from services.local_ocr_service import format_easyocr_results
 from utils.image_utils import (
     validate_image_file,
     annotate_objects_on_image,
@@ -127,6 +128,28 @@ class TestImageAnnotation(unittest.TestCase):
         ]
         ann = annotate_ocr_lines_on_image(self.test_img, sample_lines)
         self.assertEqual(ann.size, (400, 400))
+
+    def test_easyocr_results_are_normalized(self):
+        """EasyOCR output becomes line text, confidence, counts, and polygons."""
+        result = format_easyocr_results([
+            ([[10.5, 12.0], [90.0, 12.0], [90.0, 32.0], [10.5, 32.0]], "Hello world", 0.875)
+        ])
+
+        self.assertTrue(result["detected"])
+        self.assertEqual(result["total_lines"], 1)
+        self.assertEqual(result["total_words"], 2)
+        self.assertEqual(result["full_text"], "Hello world")
+        self.assertEqual(result["lines"][0]["confidence_pct"], 87.5)
+        self.assertEqual(result["lines"][0]["bounding_polygon"][0], {"x": 10, "y": 12})
+
+    def test_easyocr_empty_results(self):
+        """Empty EasyOCR output is represented as a successful no-text result."""
+        result = format_easyocr_results([])
+
+        self.assertFalse(result["detected"])
+        self.assertEqual(result["total_lines"], 0)
+        self.assertEqual(result["total_words"], 0)
+        self.assertEqual(result["full_text"], "")
 
 
 class TestVisionServiceAndDemoHandling(unittest.TestCase):
