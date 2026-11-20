@@ -147,6 +147,8 @@ AZURE_VISION_KEY=your_copied_key_1
 
 > **Note:** If you do not have Azure credentials right now, you can still run the application immediately! It will launch in **Offline Academic Demo Mode**, enabling full evaluation of all UI tabs, bounding box drawing, and OCR layouts using pre-packaged sample data.
 
+The offline showcase opens by default when Azure credentials are absent. Its captions, tags, OCR text, object boxes, and scores are pre-packaged examples for demonstrating the interface; they are not generated from uploaded images and do not represent live Azure analysis. Local image annotation and sample exports work without cloud credentials. To analyze arbitrary uploaded images with Azure, configure a valid endpoint and key.
+
 ---
 
 ## 🏃 How to Run the Application

@@ -96,7 +96,7 @@ with st.sidebar:
             "📖 Architecture & AI-900 Concepts",
             "⚙️ Azure Configuration & Diagnostics"
         ],
-        index=0,
+        index=0 if is_azure_configured else 1,
         label_visibility="collapsed"
     )
 
@@ -574,12 +574,12 @@ elif app_mode == "🏛️ Offline Demo Showcase":
         """
         <div class="ai-card-accent" style="margin-bottom: 1.5rem;">
             <div style="font-weight: 700; color: #38bdf8; font-size: 1.05rem; margin-bottom: 0.3rem;">
-                🎓 Academic Faculty Demonstration Mode
+                🎓 Offline Sample Demonstration
             </div>
             <div style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.6;">
-                This workspace allows students and university evaluators to explore the full feature set of the
-                <strong>AI-Based Image Recognition and Analysis System</strong> even without an active Microsoft Azure cloud subscription.
-                Select any of the curated academic presets below to inspect live bounding box rendering, OCR extraction, confidence analytics, and JSON export.
+                Explore the interface without Azure credentials using curated sample images and pre-packaged example results.
+                The captions, tags, OCR text, boxes, and scores are sample data—not analysis of your image and not a live Azure response.
+                Image annotations and exports are rendered locally.
             </div>
         </div>
         """,
@@ -626,11 +626,11 @@ elif app_mode == "🏛️ Offline Demo Showcase":
                         ⚠️ Scenario Description: {demo_choice.split(':')[1].split('(')[0].strip()}
                     </div>
                     <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.6;">
-                        <strong>Target Workloads Evaluated:</strong><br>
-                        • Image Captioning: Florence Foundation Model interpretation.<br>
-                        • Object Detection: Multi-class entities with pixel coordinates.<br>
-                        • Optical Character Recognition (OCR): Line-level text extraction.<br>
-                        • Confidence Analytics: Statistical thresholding.
+                        <strong>Sample outputs shown:</strong><br>
+                        • Example image caption and tags.<br>
+                        • Example object labels and pixel coordinates.<br>
+                        • Example OCR text and confidence values.<br>
+                        No cloud service is contacted in this workspace.
                     </div>
                 </div>
                 """,
@@ -643,7 +643,11 @@ elif app_mode == "🏛️ Offline Demo Showcase":
         render_disclaimer_banner(is_demo=True)
 
         # Hero Caption Banner
-        render_caption_card(demo_result["caption"]["text"], demo_result["caption"]["confidence_pct"])
+        render_caption_card(
+            demo_result["caption"]["text"],
+            demo_result["caption"]["confidence_pct"],
+            is_demo=True
+        )
 
         # Metric Cards
         dm1, dm2, dm3, dm4 = st.columns(4)

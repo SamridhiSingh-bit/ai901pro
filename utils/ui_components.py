@@ -351,19 +351,30 @@ def render_disclaimer_banner(is_demo: bool):
         )
 
 
-def render_caption_card(caption_text: str, confidence_pct: float):
-    """Renders a prominent image caption hero banner."""
+def render_caption_card(caption_text: str, confidence_pct: float, is_demo: bool = False):
+    """Renders an image caption and distinguishes sample data from live results."""
+    caption_label = "Sample Caption (Offline Demo)" if is_demo else "Natural Language Caption (Azure Vision 4.0)"
+    confidence_label = (
+        "Illustrative sample score—not model confidence"
+        if is_demo
+        else "Model Confidence"
+    )
+    model_label = (
+        "Pre-packaged example data; no AI service was called"
+        if is_demo
+        else "Generated via Microsoft Florence-backed Vision Foundation Model"
+    )
     st.markdown(
         f"""
         <div class="caption-banner">
             <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: #38bdf8; font-weight: 700; margin-bottom: 0.3rem;">
-                Natural Language Caption (Azure Vision 4.0)
+                {caption_label}
             </div>
             <div class="caption-text">
                 "{caption_text}"
             </div>
             <div class="caption-sub">
-                Model Confidence: <strong>{confidence_pct:.2f}%</strong> • Generated via Microsoft Florence-backed Vision Foundation Model
+                {confidence_label}: <strong>{confidence_pct:.2f}%</strong> • {model_label}
             </div>
         </div>
         """,
